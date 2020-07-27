@@ -41,11 +41,15 @@ class WebFlutterDriver extends FlutterDriver {
   @override
   VMServiceClient get serviceClient => throw UnsupportedError('WebFlutterDriver does not support serviceClient');
 
+  @override
+  async_io.WebDriver get webDriver => _connection._driver;
+
   /// Creates a driver that uses a connection provided by the given
   /// [hostUrl] which would fallback to environment variable VM_SERVICE_URL.
   /// Driver also depends on environment variables DRIVER_SESSION_ID,
-  /// BROWSER_SUPPORTS_TIMELINE, DRIVER_SESSION_URI, DRIVER_SESSION_SPEC
-  /// and ANDROID_CHROME_ON_EMULATOR for configurations.
+  /// BROWSER_SUPPORTS_TIMELINE, DRIVER_SESSION_URI, DRIVER_SESSION_SPEC,
+  /// DRIVER_SESSION_CAPABILITIES and ANDROID_CHROME_ON_EMULATOR for
+  /// configurations.
   static Future<FlutterDriver> connectWeb(
       {String hostUrl, Duration timeout}) async {
     hostUrl ??= Platform.environment['VM_SERVICE_URL'];
@@ -55,6 +59,7 @@ class WebFlutterDriver extends FlutterDriver {
       'session-uri': Platform.environment['DRIVER_SESSION_URI'],
       'session-spec': Platform.environment['DRIVER_SESSION_SPEC'],
       'android-chrome-on-emulator': Platform.environment['ANDROID_CHROME_ON_EMULATOR'] == 'true',
+      'session-capabilities': Platform.environment['DRIVER_SESSION_CAPABILITIES'],
     };
     final FlutterWebConnection connection = await FlutterWebConnection.connect
       (hostUrl, settings, timeout: timeout);
@@ -177,12 +182,17 @@ class FlutterWebConnection {
       String url,
       Map<String, dynamic> settings,
       {Duration timeout}) async {
-    // Use sync WebDriver because async version will create a 15 seconds
-    // overhead when quitting.
-    final async_io.WebDriver driver = await async_io.fromExistingSession(
-        settings['session-id'].toString(),
-        uri: Uri.parse(settings['session-uri'].toString()),
-        spec: _convertToSpec(settings['session-spec'].toString().toLowerCase()));
+    final sessionId = settings['session-id'].toString();
+    final sessionUri = Uri.parse(settings['session-uri'].toString());
+    // Creates the WebDriver via the constructor directly so that it can have
+    // the same capabilities as the existing one.
+    final async_io.WebDriver driver = async_io.WebDriver(
+        sessionUri,
+        sessionId,
+        jsonDecode(settings['session-capabilities']),
+        async_io.AsyncIoRequestClient(sessionUri.resolve('session/$sessionId/')),
+        _convertToSpec(settings['session-spec'].toString().toLowerCase()));
+
     if (settings['android-chrome-on-emulator'] == true) {
       final Uri localUri = Uri.parse(url);
       // Converts to Android Emulator Uri.

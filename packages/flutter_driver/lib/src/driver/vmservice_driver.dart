@@ -13,6 +13,7 @@ import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:vm_service_client/vm_service_client.dart';
 import 'package:web_socket_channel/io.dart';
+import 'package:webdriver/async_io.dart' as async_io;
 
 import '../../flutter_driver.dart';
 import '../common/error.dart';
@@ -302,6 +303,9 @@ class VMServiceFlutterDriver extends FlutterDriver {
 
   @override
   VMServiceClient get serviceClient => _serviceClient;
+
+  @override
+  async_io.WebDriver get webDriver => throw UnsupportedError('VMServiceFlutterDriver does not support webDriver');
 
   /// The main isolate hosting the Flutter application.
   ///
